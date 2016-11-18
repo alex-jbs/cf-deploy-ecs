@@ -1,13 +1,13 @@
 
 # cf-ecs-deploy
-Deployment to Amazon ECS Service
+Deploy Codefresh to Amazon ECS Service
 
-### Prerequiests
-- Configured ECS Cluster with at least one running instance.
-- Configured ECS Service and task definition with an image being deployed.
+### Prerequisites
+- Configure an ECS Cluster with at least one running instance.
+- Configure an ECS Service and task definition with a deployed image.
   See http://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html
 
-- AWS Credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) with following priviledges:
+- Verify you have AWS Credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY), with following privileges:
 ```json
 {
   "Version": "2012-10-17",
@@ -34,11 +34,17 @@ Deployment to Amazon ECS Service
 ```
 
 ### Deployment with Codefresh
-- Add encrypted environment variables for aws credentials.
+The ```codefresh.yml``` file runs the ```codefresh/cf-deploy-ecs``` image with the ```cfecs-update``` command.
+
+1. Add encrypted environment variables for AWS credentials.
      * AWS_ACCESS_KEY_ID
      * AWS_SECRET_ACCESS_KEY
-- Add "deploy to ecs" step to codefresh.yml which runs codefresh/cf-deploy-ecs image with command cfecs-update
-  Specify the aws region, ecs cluster and service names. See `cfecs-update -h` for parameter references
+2. Add the "deploy to ecs" step to the ```codefresh.yml``` file.
+3. Specify the following parameters.
+   - `aws region`
+   - `ecs cluster`
+   - `ecs-service-names`. 
+See `cfecs-update -h` for parameter references.
 
 ```yaml
 # codefresh.yml example with deploy to ecs step
@@ -69,16 +75,17 @@ steps:
 
 
 ### Deployment Flow
-- get ECS service by specified aws region, ecs cluster and service names
-- create new revision from current task definition of the service. If --image-name and --image-tag are provided, replace the tag of the image
-- launch update-service with new task definition revision
-- wait for deployment to complete (by default, if running withou --no-wait)
-    * deployment is considered as completed successfully if runningCount == desiredCount for PRIMARY deployment - see `aws ecs describe-service`
-    * cfecs-update exits with timeout if after --timeout (default = 900s) runningCount != desiredCount script exits with timeout
-    * cfecs-update exits with error if --max-failed (default = 2) or more ecs tasks were stopped with error for the task definition being deployed.
-      ECS retries failed tasks continuously
+1. Get the ECS service by specified `aws-region`, `ecs-cluster`, and `service-names`.
+2. Create a new revision from the current task definition of the service. If `--image-name` and `--image-tag` are provided, replace the image tag.
+3. Run the `update-service` command with the new task definition revision.
+4. Wait for the deployment to complete. 
+   By default, service deployment is no run with the `--no-wait` command.
+    * Deployment is successfully completed if runningCount == desiredCount for PRIMARY deployment - see `aws ecs describe-service`
+    * The `cfecs-update` command exits with a timeout error if --timeout (default = 900s) runningCount != desiredCount script exits with timeout
+    * The `cfecs-update` exits with an error if --max-failed (default = 2) or more ECS tasks were stopped with error for the task definition that you are deploying.
+      ECS continuously retries failed tasks.
 
-### Usage with docker
+### Usage with Docker
 
 ```bash
 docker run --rm -it -e AWS_ACCESS_KEY_ID=**** -e AWS_SECRET_ACCESS_KEY=**** codefresh/cf-ecs-deploy cfecs-update [options] <aws-region> <ecs-cluster-name> <ecs-service-name>
